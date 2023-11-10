@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  WordGarden
 //
-//  Created by David Veeneman on 10/12/23.
+//  Created by David Veeneman on 10/12/23..
 //
 
 import SwiftUI
@@ -16,7 +16,7 @@ struct ContentView: View {
     @State private var revealedWord = ""
     @State private var lettersGuessed = ""
     @State private var guessesRemaining = 8
-    @State private var gameStatusMessage = "How many Guesses to Uncover the Hidden Word?"
+    @State private var gameStatusMessage = "How Many Guesses to Uncover the Hidden Word?"
     @State private var guessedLetter = ""
     @State private var imageName = "flower8"
     @State private var playAgainHidden = true
@@ -24,23 +24,25 @@ struct ContentView: View {
     @State private var audioPlayer: AVAudioPlayer!
     @FocusState private var textFieldIsFocused: Bool
     
-    private let wordstoGuess = ["SWIFT", "DOG", "CAT"]
+    private let wordsToGuess = ["SWIFT", "DOG", "CAT"]
     private let maximumGuesses = 8
     
     var body: some View {
         VStack {
-            HStack{
+            HStack {
                 VStack(alignment: .leading) {
                     Text("Words Guessed: \(wordsGuessed)")
                     Text("Words Missed: \(wordsMissed)")
                 }
+                
                 Spacer()
+                
                 VStack(alignment: .trailing) {
-                    Text("Words to Guess: \(wordstoGuess.count - (wordsGuessed + wordsMissed))")
-                    Text("Words in Game: \(wordstoGuess.count)")
+                    Text("Words to Guess: \(wordsToGuess.count - wordsGuessed - wordsMissed)")
+                    Text("Words in Game: \(wordsToGuess.count)")
                 }
             }
-            .padding()
+            .padding(.horizontal)
             
             Spacer()
             
@@ -53,7 +55,6 @@ struct ContentView: View {
             
             Spacer()
             
-            // TODO: Switch to wordsToGuess[currentWord]
             Text(revealedWord)
                 .font(.title)
             
@@ -62,31 +63,34 @@ struct ContentView: View {
                     TextField("", text: $guessedLetter)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 30)
-                        .overlay {
+                        .overlay(
                             RoundedRectangle(cornerRadius: 5)
                                 .stroke(.gray, lineWidth: 2)
-                        }
+                        )
                         .keyboardType(.asciiCapable)
                         .submitLabel(.done)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.characters)
-                        .onChange(of: guessedLetter) {
+                        .onChange(of: guessedLetter) { 
                             guessedLetter = guessedLetter.trimmingCharacters(in: .letters.inverted)
+                            
                             guard let lastChar = guessedLetter.last else {
                                 return
                             }
+                            
                             guessedLetter = String(lastChar).uppercased()
                         }
                         .onSubmit {
-                            guard guessedLetter != "" else {
+                            guard !guessedLetter.isEmpty else {
                                 return
                             }
+                            
                             guessALetter()
                             updateGamePlay()
                         }
                         .focused($textFieldIsFocused)
                     
-                    Button("Guess a letter"){
+                    Button("Guess a Letter") {
                         guessALetter()
                         updateGamePlay()
                     }
@@ -96,39 +100,36 @@ struct ContentView: View {
                 }
             } else {
                 Button(playAgainButtonLabel) {
-                    
-                    // If all words have been guessed...
-                    if currentWordIndex == wordstoGuess.count {
+                    if currentWordIndex == wordsToGuess.count {
                         currentWordIndex = 0
                         wordsGuessed = 0
                         wordsMissed = 0
                         playAgainButtonLabel = "Another Word?"
                     }
                     
-                    // Reset after a word was guessed or missed
-                    wordToGuess = wordstoGuess[currentWordIndex]
+                    wordToGuess = wordsToGuess[currentWordIndex]
                     revealedWord = "_" + String(repeating: " _", count: wordToGuess.count - 1)
                     lettersGuessed = ""
                     guessesRemaining = maximumGuesses
                     imageName = "flower\(guessesRemaining)"
-                    gameStatusMessage = "How many Guesses to Uncover the Hidden Word?"
+                    gameStatusMessage = "How Many Guesses to Uncover the Hidden Word?"
                     playAgainHidden = true
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.mint)
-                
             }
+            
             Spacer()
             
             Image(imageName)
                 .resizable()
                 .scaledToFit()
-                .animation(.easeIn(duration: 0.75), value: imageName)
+                .animation(.easeInOut(duration: 0.75), value: imageName)
         }
         .ignoresSafeArea(edges: .bottom)
         .onAppear() {
-            wordToGuess = wordstoGuess[currentWordIndex]
-            revealedWord = "_" + String(repeating: " _", count: wordToGuess.count-1)
+            wordToGuess = wordsToGuess[currentWordIndex]
+            revealedWord = "_" + String(repeating: " _", count: wordToGuess.count - 1)
             guessesRemaining = maximumGuesses
         }
     }
@@ -138,86 +139,52 @@ struct ContentView: View {
         lettersGuessed += guessedLetter
         
         revealedWord = ""
-        
-        /* Iterate wordToGuess, checking if the letter appears in the list of guesses.
-         If it does, add the letter and a space to revealedWord. if the letter hasn't
-         been guessed yet, add an underscore and a space to revealedWord. */
-        
-        // Loop through all letters in wordToGuess
         for letter in wordToGuess {
-            
-            // Check letter in wordToGuess
-            if lettersGuessed.contains(letter) {
-                
-                // Add letter and space to revealedWord
-                revealedWord += "\(letter) "
-                
-            } else {
-                // Add underscore and space to revealedWord
-                revealedWord += "_ "
-            }
+            revealedWord += "\(lettersGuessed.contains(letter) ? letter : "_") "
         }
         revealedWord.removeLast()
-        
     }
     
-    func updateGamePlay () {
-        
-        //Decrement counter and update image
-        if !wordToGuess .contains(guessedLetter) {
+    func updateGamePlay() {
+        if !wordToGuess.contains(guessedLetter) {
             guessesRemaining -= 1
-            
-            //Animate crumbling leaf and play 'incorrect' sound
             imageName = "wilt\(guessesRemaining)"
             playSound(soundName: "incorrect")
             
-            // Delay change to flower image until after wilt animation is done
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) {
                 imageName = "flower\(guessesRemaining)"
             }
-            
         } else {
             playSound(soundName: "correct")
         }
         
-        // Word guessed (no '_' in revealed word)
         if !revealedWord.contains("_") {
-            gameStatusMessage = "You've Guessed it! It Took You \(lettersGuessed.count) Guesses to Guess the Word"
+            gameStatusMessage = "You've Guessed It! It Took You \(lettersGuessed.count) Guesses to Guess the Word."
             wordsGuessed += 1
             currentWordIndex += 1
             playAgainHidden = false
             playSound(soundName: "word-guessed")
-            
-        // Word missed (out of guesses)
-        } else if guessesRemaining == 0 { // Word missed
+        } else if guessesRemaining == 0 {
             gameStatusMessage = "So Sorry. You're All Out of Guesses."
             wordsMissed += 1
+            currentWordIndex += 1
             playAgainHidden = false
             playSound(soundName: "word-not-guessed")
-            
-        // Keep guessing
-        } else {
-            gameStatusMessage = "You've made \(lettersGuessed.count) guess\(lettersGuessed.count == 1 ? "" : "es")"
+        } else { // Keep guessing
+            gameStatusMessage = "You've Made \(lettersGuessed.count) Guess\(lettersGuessed.count == 1 ? "" : "es")"
         }
         
-        // TODO: Debug this code
-        
-        // All words guessed
-        if currentWordIndex == wordstoGuess.count {
+        if currentWordIndex == wordsToGuess.count {
             playAgainButtonLabel = "Restart Game?"
-            gameStatusMessage = "/nYou've Tried All the Words. Restart from the Beginning?"
+            gameStatusMessage = gameStatusMessage + "\nYou've Tried All of the Words. Restart from the Beginning?"
         }
         
-        //Clear letter from TextField
         guessedLetter = ""
-        currentWordIndex += 1
     }
     
     func playSound(soundName: String) {
-        // Requires AVFAudio import, state variable for AVAudioPlayer
-        
         guard let soundFile = NSDataAsset(name: soundName) else {
-            print("􀀳 Could not read sound file named \(soundName)")
+            print("􀀳 Could not read file named \(soundName)")
             return
         }
         
@@ -225,12 +192,13 @@ struct ContentView: View {
             audioPlayer = try AVAudioPlayer(data: soundFile.data)
             audioPlayer.play()
         } catch {
-            print("􀀳 ERROR: \(error.localizedDescription) creating audio player.")
+            print("􀀳 ERROR: \(error.localizedDescription) creating audioPlayer.")
         }
     }
-    
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }
